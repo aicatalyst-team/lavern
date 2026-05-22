@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lavern
+  namespace: lavern
+  labels:
+    app.kubernetes.io/name: lavern
+    app.kubernetes.io/managed-by: autopoc
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: lavern
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP

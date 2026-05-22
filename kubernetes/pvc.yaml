@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lavern-data
+  namespace: lavern
+  labels:
+    app.kubernetes.io/name: lavern
+    app.kubernetes.io/managed-by: autopoc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
