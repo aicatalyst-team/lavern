@@ -1,0 +1,72 @@
+# ── Stage 1: Build frontend ──────────────────────────────────────────────
+FROM registry.access.redhat.com/ubi9/nodejs-22 AS frontend-build
+
+USER 0
+WORKDIR /opt/app-root/src/viz
+COPY viz/package*.json ./
+RUN npm ci --ignore-scripts
+COPY viz/ ./
+RUN npm run build
+
+# ── Stage 2: Build API ──────────────────────────────────────────────────
+FROM registry.access.redhat.com/ubi9/nodejs-22 AS api-build
+
+USER 0
+WORKDIR /opt/app-root/src
+COPY package*.json .npmrc ./
+RUN npm ci --ignore-scripts
+COPY tsconfig.json ./
+COPY src/ src/
+
+# ── Stage 3: Runtime ────────────────────────────────────────────────────
+FROM registry.access.redhat.com/ubi9/nodejs-22 AS runtime
+
+# Install better-sqlite3 native module build deps
+USER 0
+RUN dnf install -y python3 make gcc-c++ && dnf clean all
+
+WORKDIR /opt/app-root/src
+
+# Copy package files and install production deps.
+# `.npmrc` carries `legacy-peer-deps=true` so the zod@^4 / openai@^4 peer
+# conflict resolves cleanly inside the container.
+COPY package*.json .npmrc ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+# tsx is a devDependency but required at runtime to execute TypeScript.
+# Install it globally so it's available regardless of --omit=dev.
+RUN npm install -g tsx
+
+# Copy source (we run TypeScript via tsx — no compile step needed)
+COPY tsconfig.json ./
+COPY src/ src/
+COPY SOUL.md ./
+
+# Copy built frontend
+COPY --from=frontend-build /opt/app-root/src/viz/dist viz/dist
+
+# Data directory for SQLite
+RUN mkdir -p /opt/app-root/src/data /opt/app-root/src/audit-logs
+
+# Environment defaults
+ENV NODE_ENV=production
+ENV SHEM_HOST=0.0.0.0
+ENV SHEM_PORT=3000
+ENV SHEM_DB_PATH=/opt/app-root/src/data/lavern.db
+ENV SHEM_AUDIT_DIR=/opt/app-root/src/audit-logs
+ENV SHEM_CORS_ORIGINS=*
+# Must be provided at runtime via K8s secret/configmap
+ENV ANTHROPIC_API_KEY=""
+
+EXPOSE 3000
+
+# OpenShift compatibility — arbitrary UID support
+RUN chgrp -R 0 /opt/app-root && chmod -R g=u /opt/app-root
+
+RUN chgrp -R 0 /opt/app-root/src/node_modules && chmod -R g=u /opt/app-root/src/node_modules || true
+USER 1001
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "fetch('http://localhost:3000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
+
+CMD ["npx", "tsx", "src/index.ts", "--serve"]
