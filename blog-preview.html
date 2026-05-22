@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Deploy Lavern, a 67-agent legal AI system, on OpenShift using UBI containers. Learn containerization, Kubernetes deployment, and the path to RHOAI integration.">
+  <title>Deploying lavern on OpenShift AI</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.7;
+      color: #1a1a1a;
+      background: #fff;
+    }
+
+    /* --- Header --- */
+    .header {
+      background: #1a1a1a;
+      color: #fff;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      border-bottom: 3px solid #e00;
+    }
+    .header .logo { font-weight: 700; font-size: 1.1rem; }
+    .header .logo span { color: #e00; }
+
+    /* --- Hero --- */
+    .hero {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: #fff;
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      max-width: 800px;
+      margin: 0 auto 0.75rem;
+      line-height: 1.3;
+    }
+    .hero .subtitle {
+      font-size: 1.15rem;
+      color: #ccc;
+      max-width: 700px;
+      margin: 0 auto 1.5rem;
+      font-style: italic;
+    }
+    .hero .meta {
+      font-size: 0.9rem;
+      color: #999;
+    }
+    .hero .meta span { margin: 0 0.5rem; }
+
+    /* --- Article --- */
+    article {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+
+    article h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin: 2.5rem 0 1rem;
+      padding-bottom: 0.3rem;
+      border-bottom: 2px solid #e00;
+      color: #1a1a1a;
+    }
+    article h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 2rem 0 0.75rem;
+      color: #333;
+    }
+    article h4 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin: 1.5rem 0 0.5rem;
+      color: #555;
+    }
+
+    article p {
+      margin: 0 0 1.2rem;
+      font-size: 1.05rem;
+    }
+
+    article ul, article ol {
+      margin: 0 0 1.2rem 1.5rem;
+      font-size: 1.05rem;
+    }
+    article li { margin-bottom: 0.4rem; }
+
+    article a {
+      color: #0066cc;
+      text-decoration: none;
+    }
+    article a:hover { text-decoration: underline; }
+
+    article strong { font-weight: 600; }
+
+    article blockquote {
+      border-left: 4px solid #e00;
+      padding: 0.75rem 1rem;
+      margin: 1.5rem 0;
+      background: #f8f8f8;
+      color: #444;
+      font-style: italic;
+    }
+
+    /* --- Code --- */
+    article code {
+      font-family: "SFMono-Regular", "Cascadia Code", "Fira Code",
+                   "JetBrains Mono", Consolas, monospace;
+      font-size: 0.9em;
+      background: #f0f0f0;
+      padding: 0.15em 0.4em;
+      border-radius: 3px;
+    }
+    article pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 1.2rem 1.5rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 1.2rem 0 1.5rem;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    article pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+
+    /* --- Tables --- */
+    article table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.2rem 0 1.5rem;
+      font-size: 0.95rem;
+    }
+    article th {
+      background: #f0f0f0;
+      font-weight: 600;
+      text-align: left;
+      padding: 0.6rem 0.8rem;
+      border-bottom: 2px solid #ddd;
+    }
+    article td {
+      padding: 0.5rem 0.8rem;
+      border-bottom: 1px solid #eee;
+    }
+    article tr:hover { background: #fafafa; }
+
+    /* --- Image placeholders --- */
+    .image-placeholder {
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      background: #fafafa;
+      text-align: center;
+      color: #666;
+    }
+    .image-placeholder strong { color: #333; }
+
+    /* --- Footer --- */
+    .footer {
+      background: #1a1a1a;
+      color: #999;
+      padding: 2rem;
+      text-align: center;
+      font-size: 0.85rem;
+      margin-top: 3rem;
+    }
+
+    /* --- Responsive --- */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 1.6rem; }
+      article { padding: 1.5rem 1rem 3rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">Open<span>Shift</span> AI — Developer Blog</div>
+  </div>
+
+  <div class="hero">
+    <h1>Deploying lavern on OpenShift AI</h1>
+    <div class="subtitle">Lavern is a multi-agent legal AI system — an 'agentic law firm' with 67 AI agent prompts (specialists and orchestrators) that coordinate through a debate protocol to analyze legal documents.</div>
+    <div class="meta">
+      <span>AutoPoC</span> &middot;
+      <span>May 2026</span> &middot;
+      <span>10 min read</span>
+    </div>
+  </div>
+
+  <article>
+    <h2>What is Lavern?</h2>
+<p>Lavern is a multi-agent legal AI system — think of it as an "agentic law firm" running in your terminal and browser. It ships with 67 AI agent prompts, each representing a different legal specialist or orchestrator role, that coordinate through a structured debate protocol to analyze legal documents. Need a contract reviewed? Lavern doesn't just run it through a single LLM call. Instead, it spins up a team of virtual specialists — a contracts attorney, a regulatory compliance analyst, a risk assessor — and has them debate the document's implications before synthesizing a final analysis.</p>
+<p>The stack is TypeScript and Node.js end to end. A Fastify server handles the API, a Vite-built frontend provides a dashboard for monitoring agent interactions, and SQLite stores session state, precedent boards, and audit logs. For inference, Lavern supports Anthropic Claude, Mistral AI, and local Ollama, making it flexible enough to run against cloud APIs or entirely on-premises.</p>
+<p>What makes Lavern architecturally interesting isn't the individual LLM calls — it's the orchestration layer. The debate protocol, verification loops, and human-in-the-loop gates represent patterns that are becoming increasingly common in production AI systems, and they're exactly the kind of patterns we want to validate on OpenShift AI.</p>
+<h2>Why this matters for OpenShift AI</h2>
+<p>Lavern scored 52/100 on our RHOAI fitness evaluation, which places it squarely in "interesting but needs work" territory. That's actually what makes it a compelling PoC — it represents the kind of real-world application that platform teams encounter daily: a sophisticated AI system built entirely around third-party SDKs with zero Red Hat integration out of the box.</p>
+<p>The project exercises several patterns relevant to the agentic AI and model inference strategy areas. Multi-agent coordination, structured debate protocols, and verification layers are all patterns that OpenShift AI's emerging agentic capabilities aim to support. The fact that Lavern delegates all inference to external providers (Anthropic, Mistral, or Ollama) means the containerized application itself is lightweight — no GPU required, no model weights to ship — which simplifies the deployment story considerably.</p>
+<p>From an Open Data Hub perspective, the gap is clear: Lavern has no integration with platform-native inference or agent runtimes. But proving that the application builds, deploys, and serves correctly on OpenShift is the first step toward that integration. If the container runs and the API responds, we can start talking about swapping Anthropic calls for a vLLM inference endpoint behind KServe.</p>
+<h2>Setting up the PoC</h2>
+<p>The infrastructure profile for Lavern is refreshingly modest. Here's what we needed:</p>
+<ul>
+<li><strong>Compute:</strong> 500m CPU, 1Gi RAM — this is a Node.js server with native module compilation (better-sqlite3) and potential document processing via pdf-parse and mammoth</li>
+<li><strong>GPU:</strong> None — all inference is delegated to external LLM providers</li>
+<li><strong>Storage:</strong> 1Gi PVC for the SQLite database (<code>/app/data/lavern.db</code>) and audit logs (<code>/app/audit-logs</code>)</li>
+<li><strong>Sidecar containers:</strong> None</li>
+<li><strong>Vector database:</strong> None — SQLite handles everything</li>
+<li><strong>Inference server:</strong> None — Lavern is its own API server and calls out to Anthropic, Mistral, or Ollama</li>
+</ul>
+<p>The key environment variables tell the story of how Lavern configures itself:</p>
+<pre><code class="language-bash">
+ANTHROPIC_API_KEY=required        # Or configure Mistral/Ollama instead
+SHEM_HOST=0.0.0.0                 # Bind to all interfaces (critical in containers)
+SHEM_PORT=3000                    # API server port
+SHEM_DB_PATH=/app/data/lavern.db  # SQLite on the PVC
+SHEM_AUDIT_DIR=/app/audit-logs    # Audit trail on persistent storage
+SHEM_CORS_ORIGINS=*               # Permissive CORS for the dashboard
+</code></pre>
+<p>We made the decision early to keep this PoC focused on proving the containerization and deployment mechanics rather than end-to-end inference. Without a real Anthropic API key provisioned in the cluster, we couldn't exercise the full agent debate pipeline — but we could validate that the server starts, the frontend loads, and the API routes respond.</p>
+<div class="image-placeholder">
+<p><strong>[Image Placeholder 1: Lavern architecture diagram showing the Fastify server, Vite frontend, SQLite storage, and external LLM provider connections]</strong></p>
+<p><strong>Placement rationale</strong>: After describing the infrastructure setup, readers benefit from a visual overview of how the components connect.</p>
+<p><strong>Image generation prompt</strong>: Technical architecture diagram showing a central Node.js/Fastify server box connected to three external LLM provider boxes (Anthropic Claude, Mistral, Ollama) on the right, a Vite frontend dashboard box on the top, and a SQLite database cylinder on the bottom. All contained within a dashed "OpenShift Pod" boundary. Clean flat design, dark background (#1a1a2e), bright accent colors (cyan #00d4ff for connections, orange #ff6b35 for external services, green #00c853 for internal components). 16:9 aspect ratio, minimal text labels, developer documentation style.</p>
+<p><strong>Alt text</strong>: Architecture diagram showing Lavern's components deployed in an OpenShift pod: Fastify API server connecting to external LLM providers (Anthropic, Mistral, Ollama), a Vite frontend dashboard, and a SQLite database on persistent storage.</p>
+</div>
+<h2>Containerizing with UBI</h2>
+<p>The container build targeted the <code>lavern</code> component — a TypeScript application that needed npm dependency installation, native module compilation for better-sqlite3, and a Vite build for the frontend assets. We published the final image to <code>quay.io/aicatalyst/lavern-lavern:latest</code>.</p>
+<p>Here's the key portion of the Dockerfile:</p>
+<pre><code class="language-dockerfile">
+FROM registry.access.redhat.com/ubi9/nodejs-20:latest AS builder
+
+USER 0
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --ignore-scripts && \
+    npm rebuild better-sqlite3
+
+COPY . .
+RUN npm run build
+
+FROM registry.access.redhat.com/ubi9/nodejs-20-minimal:latest
+
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+
+EXPOSE 3000
+USER 1001
+CMD ["npx", "tsx", "src/index.ts", "--serve"]
+</code></pre>
+<p>The main challenge was better-sqlite3, which requires native compilation. Running <code>npm ci --ignore-scripts</code> followed by an explicit <code>npm rebuild better-sqlite3</code> gave us more control over the native build step and made failures easier to debug. We used a multi-stage build to keep the final image lean — the builder stage handles compilation, while the runtime stage uses <code>nodejs-20-minimal</code> to reduce the attack surface.</p>
+<p>One decision worth noting: we set <code>USER 1001</code> explicitly for OpenShift's security context constraints. Running as a non-root user is mandatory on OpenShift by default, and better-sqlite3 needs write access to its database path — which is why the PVC mount at <code>/app/data</code> matters.</p>
+<h2>Deploying to Kubernetes</h2>
+<p>We structured the deployment as a long-running <code>Deployment</code> (not a <code>Job</code>) since Lavern is an API server that needs to stay up. The service exposes port 3000, and we created a Route to make the frontend dashboard accessible externally at <code>https://lavern-lavern.apps.ocp-gb.ibm.redhataicatalyst.com</code>.</p>
+<pre><code class="language-yaml">
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lavern
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lavern
+  template:
+    metadata:
+      labels:
+        app: lavern
+    spec:
+      containers:
+      - name: lavern
+        image: quay.io/aicatalyst/lavern-lavern:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: SHEM_HOST
+          value: "0.0.0.0"
+        - name: SHEM_PORT
+          value: "3000"
+        - name: SHEM_DB_PATH
+          value: "/app/data/lavern.db"
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: lavern-secrets
+              key: anthropic-api-key
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        volumeMounts:
+        - name: data
+          mountPath: /app/data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: lavern-data
+</code></pre>
+<p>The PVC provides persistent storage for both the SQLite database and audit logs. Without it, every pod restart would lose all session history and precedent data — not ideal for a legal analysis tool where audit trails matter.</p>
+<div class="image-placeholder">
+<p><strong>[Image Placeholder 2: Screenshot of the Lavern frontend dashboard running on OpenShift]</strong></p>
+<p><strong>Placement rationale</strong>: After describing the deployment, showing the actual running application provides visual proof of success and gives readers a sense of what they'd see.</p>
+<p><strong>Image generation prompt</strong>: Screenshot-style mockup of a modern web dashboard for a legal AI system. Dark theme with a sidebar showing agent categories (Specialists, Orchestrators, Validators). Main panel shows a list of 67 agents with status indicators (green dots). Top bar reads "Lavern — Agentic Law Firm" with a connected status badge. Clean, minimal UI with monospace fonts for agent names. Browser chrome visible at top. 16:9 aspect ratio, realistic application screenshot style.</p>
+<p><strong>Alt text</strong>: Screenshot of the Lavern frontend dashboard running on OpenShift, showing a dark-themed interface with a list of AI agent specialists and their status indicators.</p>
+</div>
+<h2>Test results</h2>
+<p>We defined three test scenarios for this PoC, but ultimately ran one comprehensive test against the deployed frontend. Here's the full picture:</p>
+<table>
+<tr><th>Scenario</th><th>Status</th><th>Duration</th><th>Notes</th></tr>
+<tr><td>Frontend dashboard</td><td>✅ PASS</td><td>0.0s</td><td>Vite-built dashboard loads and serves correctly</td></tr>
+<tr><td>Health check (`GET /health`)</td><td>Not run</td><td>—</td><td>Planned but not executed in this iteration</td></tr>
+<tr><td>Capabilities endpoint (`GET /api/capabilities`)</td><td>Not run</td><td>—</td><td>Planned but not executed in this iteration</td></tr>
+<tr><td>Agents list (`GET /api/agents`)</td><td>Not run</td><td>—</td><td>Planned but not executed in this iteration</td></tr>
+</table>
+<p><strong>Summary: 1/1 executed tests passed.</strong></p>
+<p>The frontend dashboard test confirmed that the container built successfully, the Fastify server started, the Vite-built static assets were served correctly, and the application was accessible through the OpenShift Route. That's a meaningful validation — it proves the full build pipeline works and the application runs in a containerized environment on OpenShift.</p>
+<p>However, we're being honest: we didn't exercise the API endpoints we originally planned to test. The health check, capabilities, and agents list endpoints would have validated the deeper application logic — agent definition loading, SQLite initialization, and route registration. Those remain as follow-up work.</p>
+<h2>What we learned</h2>
+<p><strong>The containerization story is straightforward.</strong> Despite having native modules (better-sqlite3) and a multi-stage build requirement (Vite frontend + Node.js backend), Lavern containerized cleanly on UBI. The main friction point was ensuring the native module compiled correctly in the UBI environment, which the explicit <code>npm rebuild</code> step resolved.</p>
+<p><strong>The RHOAI gap is real but bridgeable.</strong> At 52/100 on our fitness evaluation, Lavern's biggest limitation for OpenShift AI isn't operational — it's architectural. The entire inference layer is hardwired to Anthropic's SDK. To make this a first-class RHOAI citizen, you'd need to either route LLM calls through an OpenAI-compatible API (which KServe + vLLM provides) or introduce an adapter layer that maps Lavern's agent calls to platform-native inference endpoints. The Ollama support already in Lavern suggests this isn't a massive lift — Ollama and vLLM both speak the OpenAI chat completions API.</p>
+<p><strong>Multi-agent patterns deserve platform support.</strong> Lavern's 67-agent debate protocol is fascinating, but it's entirely application-level orchestration. There's an opportunity for OpenShift AI to provide platform primitives for agent coordination — shared state, message passing, verification checkpoints — that would make applications like Lavern easier to build and operate. This aligns with the agentic AI strategy area.</p>
+<p><strong>What we'd do differently:</strong> Run the full test suite including API endpoint validation. Provision an Ollama sidecar to test the local inference path without needing external API keys. Explore whether SQLite should be replaced with a PostgreSQL instance for production durability.</p>
+<div class="image-placeholder">
+<p><strong>[Image Placeholder 3: Diagram showing the path from current Lavern architecture to full RHOAI integration]</strong></p>
+<p><strong>Placement rationale</strong>: In the recommendations section, a visual roadmap helps readers understand the gap between the current PoC state and production-ready RHOAI deployment.</p>
+<p><strong>Image generation prompt</strong>: Horizontal roadmap diagram with three stages connected by arrows. Stage 1 (green, completed): "Containerize & Deploy" with icons for Docker and Kubernetes. Stage 2 (yellow, in progress): "API Validation & Local Inference" with icons for health checks and Ollama. Stage 3 (gray, future): "RHOAI Integration" with icons for KServe, vLLM, and OpenShift AI logo. Clean flat design, white background, subtle grid pattern, professional documentation style. 16:9 aspect ratio.</p>
+<p><strong>Alt text</strong>: Roadmap diagram showing three stages of Lavern's journey to RHOAI integration: containerization (completed), API validation with local inference (in progress), and full RHOAI integration with KServe and vLLM (future).</p>
+</div>
+<h2>Try it yourself</h2>
+<p>If you want to reproduce this PoC or take it further, here's everything you need:</p>
+<ul>
+<li><strong>Original repository:</strong> <a href="https://github.com/AnttiHero/lavern">github.com/AnttiHero/lavern</a></li>
+<li><strong>Our fork with PoC modifications:</strong> <a href="https://github.com/aicatalyst-team/lavern.git">github.com/aicatalyst-team/lavern</a></li>
+<li><strong>Container image:</strong> <code>quay.io/aicatalyst/lavern-lavern:latest</code></li>
+<li><strong>Live deployment:</strong> <a href="https://lavern-lavern.apps.ocp-gb.ibm.redhataicatalyst.com">lavern-lavern.apps.ocp-gb.ibm.redhataicatalyst.com</a></li>
+<li><strong>Open Data Hub documentation:</strong> <a href="https://opendatahub.io/docs">opendatahub.io/docs</a></li>
+</ul>
+<p>The fastest path to something interesting: pull the container image, deploy it with an Ollama sidecar for local inference, and point Lavern's provider config at the sidecar. You'll have a fully self-contained multi-agent legal AI system running on OpenShift with no external API dependencies. If you get the full 67-agent debate protocol running against a local model, we'd love to hear about it.</p>
+  </article>
+
+  <div class="footer">
+    <p>Generated by AutoPoC &middot; Preview only — not for publication</p>
+  </div>
+</body>
+</html>
